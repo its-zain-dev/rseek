@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>rseek — Lightweight Rust Metasearch</title>
+  <link rel="search" type="application/opensearchdescription+xml" title="rseek" href="/opensearch.xml" />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f6f8fa;
+      --border: #d8dee4;
+      --text: #1f2328;
+      --muted: #656d76;
+      --accent: #e4572e;
+      --accent-soft: rgba(228, 87, 46, 0.12);
+      --link: #0969da;
+      --url: #1a7f37;
+      --ok: #1a7f37;
+      --warn: #9a6700;
+      --err: #cf222e;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --surface: #161b22;
+        --border: #30363d;
+        --text: #e6edf3;
+        --muted: #8b949e;
+        --accent: #ff7b54;
+        --accent-soft: rgba(255, 123, 84, 0.14);
+        --link: #58a6ff;
+        --url: #3fb950;
+        --ok: #3fb950;
+        --warn: #d29922;
+        --err: #f85149;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 20px 16px 48px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+    .brand span {
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 2px 7px;
+      border-radius: 999px;
+    }
+    .header-links {
+      display: flex;
+      gap: 12px;
+      font-size: 0.85rem;
+    }
+    .header-links a { color: var(--muted); text-decoration: none; }
+    .header-links a:hover { color: var(--accent); }
+    .search-box {
+      position: relative;
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .search-box input {
+      flex: 1;
+      padding: 12px 14px;
+      font-size: 1rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+    }
+    .search-box button {
+      padding: 0 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+    }
+    .search-box button:hover { opacity: 0.92; }
+    .suggest-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 92px;
+      margin-top: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+      z-index: 20;
+      overflow: hidden;
+      display: none;
+    }
+    .suggest-item {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 0.92rem;
+    }
+    .suggest-item:hover { background: var(--surface); }
+    .cats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .cat-btn {
+      padding: 5px 11px;
+      font-size: 0.82rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .cat-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .engines-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .pill {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 0.75rem;
+    }
+    .pill.ok { border-color: var(--ok); color: var(--ok); }
+    .pill.warn { border-color: var(--warn); color: var(--warn); }
+    .pill.err { border-color: var(--err); color: var(--err); }
+    .infobox {
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      margin-bottom: 16px;
+    }
+    .infobox h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .infobox p { margin: 0 0 8px; font-size: 0.92rem; color: var(--muted); }
+    .infobox a { font-size: 0.82rem; color: var(--link); text-decoration: none; }
+    .results { display: flex; flex-direction: column; gap: 16px; }
+    .card {
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .card-title {
+      font-size: 1.08rem;
+      font-weight: 600;
+      color: var(--link);
+      text-decoration: none;
+    }
+    .card-title:hover { text-decoration: underline; }
+    .card-url {
+      font-size: 0.8rem;
+      color: var(--url);
+      word-break: break-all;
+      margin: 2px 0 4px;
+    }
+    .card-snip {
+      font-size: 0.92rem;
+      color: var(--text);
+      margin: 0 0 6px;
+    }
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+    .img-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .img-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--surface);
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+    .img-card img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      display: block;
+    }
+    .img-card div {
+      padding: 8px;
+      font-size: 0.8rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .pager {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .pager button {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+    }
+    .pager button:disabled { opacity: 0.4; cursor: default; }
+    .hint {
+      margin-top: 24px;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .hint code {
+      background: var(--surface);
+      padding: 2px 6px;
+      border-radius: 5px;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a class="brand" href="/">
+        <h1>rseek</h1>
+        <span>Rust Metasearch</span>
+      </a>
+      <div class="header-links">
+        <a id="jsonLink" href="/api/v1/engines" target="_blank" rel="noopener">JSON API</a>
+        <a href="/api/v1/health" target="_blank" rel="noopener">Health</a>
+      </div>
+    </header>
+
+    <form id="searchForm" class="search-box" autocomplete="off">
+      <input id="q" type="search" placeholder="Search the web, !gh repo, !arxiv paper, !crates pkg, !w topic..." autofocus />
+      <button type="submit">Search</button>
+      <div id="suggestList" class="suggest-list"></div>
+    </form>
+
+    <div class="cats" id="catBar">
+      <button type="button" class="cat-btn active" data-cat="general">General</button>
+      <button type="button" class="cat-btn" data-cat="code">Code</button>
+      <button type="button" class="cat-btn" data-cat="news">News</button>
+      <button type="button" class="cat-btn" data-cat="science">Science</button>
+      <button type="button" class="cat-btn" data-cat="packages">Packages</button>
+      <button type="button" class="cat-btn" data-cat="wiki">Wiki</button>
+      <button type="button" class="cat-btn" data-cat="images">Images</button>
+      <button type="button" class="cat-btn" data-cat="all">All</button>
+    </div>
+
+    <div id="output">
+      <div class="hint">
+        Zero-API-key, ultra-lightweight Rust metasearch. Try bangs like
+        <code>!w rust</code>, <code>!gh axum</code>, <code>!so tokio</code>,
+        <code>!arxiv attention</code>, <code>!crates reqwest</code>,
+        <code>!npm react</code>, <code>!hn webassembly</code>, <code>!img mountains</code>.
+        Press <code>/</code> anytime to focus search.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const qInput = document.getElementById("q");
+    const suggestList = document.getElementById("suggestList");
+    const output = document.getElementById("output");
+    const jsonLink = document.getElementById("jsonLink");
+    const catButtons = document.querySelectorAll(".cat-btn");
+
+    let state = { query: "", category: "general", page: 1 };
+    let suggestTimer = null;
+
+    function esc(s) {
+      return String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function setCategory(cat) {
+      state.category = cat;
+      catButtons.forEach((b) => b.classList.toggle("active", b.dataset.cat === cat));
+    }
+
+    catButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setCategory(btn.dataset.cat);
+        state.page = 1;
+        if (qInput.value.trim()) runSearch(false);
+      });
+    });
+
+    document.getElementById("searchForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      suggestList.style.display = "none";
+      state.page = 1;
+      runSearch(true);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== qInput) {
+        e.preventDefault();
+        qInput.focus();
+      }
+    });
+
+    qInput.addEventListener("input", () => {
+      clearTimeout(suggestTimer);
+      const val = qInput.value.trim();
+      if (val.length < 2 || val.startsWith("!")) {
+        suggestList.style.display = "none";
+        return;
+      }
+      suggestTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/v1/suggest?q=${encodeURIComponent(val)}`);
+          const data = await res.json();
+          if (!data.suggestions || data.suggestions.length === 0) {
+            suggestList.style.display = "none";
+            return;
+          }
+          suggestList.innerHTML = data.suggestions
+            .map((s) => `<div class="suggest-item">${esc(s)}</div>`)
+            .join("");
+          suggestList.style.display = "block";
+          suggestList.querySelectorAll(".suggest-item").forEach((el) => {
+            el.addEventListener("click", () => {
+              qInput.value = el.textContent;
+              suggestList.style.display = "none";
+              state.page = 1;
+              runSearch(true);
+            });
+          });
+        } catch (_) {
+          suggestList.style.display = "none";
+        }
+      }, 220);
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".search-box")) suggestList.style.display = "none";
+    });
+
+    async function runSearch(pushHistory) {
+      const q = qInput.value.trim();
+      if (!q) return;
+      state.query = q;
+
+      const params = new URLSearchParams({
+        q,
+        category: state.category,
+        page: String(state.page),
+        limit: "15",
+      });
+
+      if (pushHistory) {
+        history.replaceState(null, "", `?${params.toString()}`);
+      }
+      jsonLink.href = `/api/v1/search?${params.toString()}`;
+      output.innerHTML = `<p style="color:var(--muted)">Searching...</p>`;
+
+      try {
+        const res = await fetch(`/api/v1/search?${params.toString()}`);
+        const data = await res.json();
+        render(data);
+      } catch (err) {
+        output.innerHTML = `<p style="color:var(--err)">Request failed: ${esc(err)}</p>`;
+      }
+    }
+
+    function render(data) {
+      const pills = (data.engines || [])
+        .map((e) => {
+          const cls = e.status === "ok" ? "ok" : e.status === "empty" ? "" : e.status === "rate_limited" ? "warn" : "err";
+          return `<span class="pill ${cls}" title="${esc(e.error || e.status)}">${esc(e.name)} (${e.results}, ${e.took_ms}ms)</span>`;
+        })
+        .join("");
+
+      let html = `
+        <div class="meta-bar">
+          <span>${data.total_results} results in ${data.took_ms}ms ${data.cached ? "(cached)" : ""} · page ${data.page}</span>
+          <div class="engines-pills">${pills}</div>
+        </div>
+      `;
+
+      if (data.infobox) {
+        html += `
+          <div class="infobox">
+            <h2>${esc(data.infobox.title)}</h2>
+            <p>${esc(data.infobox.abstract)}</p>
+            <a href="${esc(data.infobox.url)}" target="_blank" rel="noopener">${esc(data.infobox.source)} &rarr;</a>
+          </div>
+        `;
+      }
+
+      if (!data.results || data.results.length === 0) {
+        html += `<p style="color:var(--muted)">No results found. Try another query or category.</p>`;
+      } else if (data.category === "images") {
+        html += `<div class="img-grid">` + data.results.map((r) => `
+          <a class="img-card" href="${esc(r.url)}" target="_blank" rel="noopener">
+            <img src="${esc(r.thumbnail || r.url)}" alt="${esc(r.title)}" loading="lazy" />
+            <div>${esc(r.title)}</div>
+          </a>
+        `).join("") + `</div>`;
+      } else {
+        html += `<div class="results">` + data.results.map((r) => `
+          <article class="card">
+            <a class="card-title" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+            <div class="card-url">${esc(r.url)}</div>
+            <p class="card-snip">${esc(r.snippet)}</p>
+            <div class="card-tags">
+              <span>engines: ${esc((r.engines || []).join(", "))}</span>
+              <span>score: ${r.score}</span>
+              ${r.published ? `<span>${esc(r.published.slice(0, 10))}</span>` : ""}
+            </div>
+          </article>
+        `).join("") + `</div>`;
+      }
+
+      html += `
+        <div class="pager">
+          <button type="button" id="prevBtn" ${state.page <= 1 ? "disabled" : ""}>&larr; Prev</button>
+          <span style="font-size:0.85rem;color:var(--muted)">Page ${state.page}</span>
+          <button type="button" id="nextBtn" ${!data.results || data.results.length === 0 ? "disabled" : ""}>Next &rarr;</button>
+        </div>
+      `;
+
+      output.innerHTML = html;
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      if (prevBtn) prevBtn.addEventListener("click", () => { if (state.page > 1) { state.page--; runSearch(true); window.scrollTo(0, 0); } });
+      if (nextBtn) nextBtn.addEventListener("click", () => { state.page++; runSearch(true); window.scrollTo(0, 0); });
+    }
+
+    const initParams = new URLSearchParams(window.location.search);
+    if (initParams.get("q")) {
+      qInput.value = initParams.get("q");
+      if (initParams.get("category")) setCategory(initParams.get("category"));
+      if (initParams.get("page")) state.page = Math.max(1, Number(initParams.get("page")) || 1);
+      runSearch(false);
+    }
+  </script>
+</body>
+</html>

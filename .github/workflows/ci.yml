@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Format, Clippy & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Run unit and integration tests
+        run: cargo test --all-targets
+
+  smoke-test:
+    name: Live CLI & API Smoke Test
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Build release binary
+        run: cargo build --release
+      - name: Verify CLI commands
+        run: |
+          BIN=./target/release/rseek
+          "$BIN" --version
+          "$BIN" engines --json | jq -e '.engines | length == 10'
+          "$BIN" --json -n 3 "!w rust" | jq -e '.total_results > 0'
+          "$BIN" --json -n 3 "!hn rust" | jq -e '.total_results > 0'
+          "$BIN" --json -n 3 "!arxiv attention" | jq -e '.total_results > 0'
+          "$BIN" --json -n 3 "!crates axum" | jq -e '.total_results > 0'
+      - name: Verify HTTP Server & REST API
+        run: |
+          ./target/release/rseek serve --host 127.0.0.1 --port 18080 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:18080/api/v1/health >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+          done
+
+          curl -fsS http://127.0.0.1:18080/ | grep -q "rseek"
+          curl -fsS http://127.0.0.1:18080/api/v1/health | jq -e '.status == "ok" and .engines_total == 10'
+          curl -fsS http://127.0.0.1:18080/api/v1/engines | jq -e '.engines | length == 10'
+          curl -fsS "http://127.0.0.1:18080/api/v1/search?q=!w+rust&limit=3" | jq -e '.total_results > 0'
+          curl -fsS "http://127.0.0.1:18080/search?q=!hn+rust&limit=2&format=json" | jq -e '.total_results > 0'
+          curl -fsS "http://127.0.0.1:18080/api/v1/suggest?q=rust" | jq -e '.query == "rust"'
+          curl -fsS http://127.0.0.1:18080/opensearch.xml | grep -q "<OpenSearchDescription"
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs: check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - aarch64-linux-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: taiki-e/setup-cross-toolchain-action@v1
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/rseek" dist/rseek
+          ls -lh dist/rseek
+          tar -C dist -czf "rseek-${{ matrix.target }}.tar.gz" rseek
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rseek-${{ matrix.target }}
+          path: rseek-${{ matrix.target }}.tar.gz
