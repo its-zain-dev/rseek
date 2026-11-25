@@ -443,11 +443,7 @@ impl SearchEngineService {
                 if let Some(lock) = self.health.get(engine.name()) {
                     let g = lock.lock().await;
                     let total_calls = g.success_count + g.error_count;
-                    let avg = if total_calls > 0 {
-                        g.total_latency_ms / total_calls
-                    } else {
-                        0
-                    };
+                    let avg = g.total_latency_ms.checked_div(total_calls).unwrap_or(0);
                     let rem = g.cooldown_remaining(now);
                     (rem == 0, g.success_count, g.error_count, avg, rem)
                 } else {

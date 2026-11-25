@@ -85,6 +85,10 @@ impl SearchCache {
     pub async fn len(&self) -> usize {
         self.entries.read().await.len()
     }
+
+    pub async fn is_empty(&self) -> bool {
+        self.entries.read().await.is_empty()
+    }
 }
 
 #[cfg(test)]

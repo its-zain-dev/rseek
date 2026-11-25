@@ -105,7 +105,7 @@ pub fn canonicalize_url(raw: &str) -> String {
         return trimmed.to_string();
     };
 
-    let _ = url.set_fragment(None);
+    url.set_fragment(None);
 
     if let Some(host) = url.host_str().map(str::to_ascii_lowercase) {
         let stripped = host.strip_prefix("www.").unwrap_or(&host).to_string();
