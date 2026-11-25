@@ -8,7 +8,9 @@ use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use crate::config::{SearchConfig, ServerConfig};
 use crate::dns::build_http_client;
 use crate::engine::SearchEngineService;
-use crate::models::{Category, EngineInfo, EngineStatus, SearchQuery, SearchResponse, SuggestResponse};
+use crate::models::{
+    Category, EngineInfo, EngineStatus, SearchQuery, SearchResponse, SuggestResponse,
+};
 use crate::server;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -32,7 +34,12 @@ pub struct Cli {
     pub query: Vec<String>,
 
     /// Search category
-    #[arg(short = 'c', long = "category", default_value = "general", global = true)]
+    #[arg(
+        short = 'c',
+        long = "category",
+        default_value = "general",
+        global = true
+    )]
     pub category: Category,
 
     /// Comma-separated engines to query (e.g. duckduckgo,wikipedia,github)
@@ -321,14 +328,30 @@ pub async fn run() -> Result<(), String> {
             Ok(())
         }
         Some(Command::Repl) => {
-            repl::run_repl(&ctx, cli.category, cli.engines, cli.lang, cli.limit, no_color).await
+            repl::run_repl(
+                &ctx,
+                cli.category,
+                cli.engines,
+                cli.lang,
+                cli.limit,
+                no_color,
+            )
+            .await
         }
         Some(Command::Serve { .. }) => unreachable!(),
         None => {
             if !cli.query.is_empty() {
                 run_query_cmd(&ctx, &cli, cli.query.join(" "), format, no_color).await
             } else if std::io::stdin().is_terminal() {
-                repl::run_repl(&ctx, cli.category, cli.engines, cli.lang, cli.limit, no_color).await
+                repl::run_repl(
+                    &ctx,
+                    cli.category,
+                    cli.engines,
+                    cli.lang,
+                    cli.limit,
+                    no_color,
+                )
+                .await
             } else {
                 let mut cmd = Cli::command();
                 cmd.print_help().map_err(|e| e.to_string())?;
@@ -376,16 +399,26 @@ pub fn render_search_response(resp: &SearchResponse, format: OutputFormat, no_co
             }
         }
         OutputFormat::Markdown => {
-            println!("# Search: `{}` ({} results, {}ms)\n", resp.query, resp.total_results, resp.took_ms);
+            println!(
+                "# Search: `{}` ({} results, {}ms)\n",
+                resp.query, resp.total_results, resp.took_ms
+            );
             if let Some(info) = &resp.infobox {
-                println!("> **{}** — {} ([{}]({}))\n", info.title, info.abstract_text, info.source, info.url);
+                println!(
+                    "> **{}** — {} ([{}]({}))\n",
+                    info.title, info.abstract_text, info.source, info.url
+                );
             }
             for (i, r) in resp.results.iter().enumerate() {
                 println!("{}. **[{}]({})**", i + 1, r.title, r.url);
                 if !r.snippet.is_empty() {
                     println!("   {}", r.snippet);
                 }
-                println!("   *Engines: {} | Score: {}*\n", r.engines.join(", "), r.score);
+                println!(
+                    "   *Engines: {} | Score: {}*\n",
+                    r.engines.join(", "),
+                    r.score
+                );
             }
         }
         OutputFormat::Compact => {
@@ -396,7 +429,9 @@ pub fn render_search_response(resp: &SearchResponse, format: OutputFormat, no_co
         OutputFormat::Pretty => {
             let use_color = !no_color && std::io::stdout().is_terminal();
             let (bold, cyan, green, dim, yellow, reset) = if use_color {
-                ("\x1b[1m", "\x1b[36m", "\x1b[32m", "\x1b[2m", "\x1b[33m", "\x1b[0m")
+                (
+                    "\x1b[1m", "\x1b[36m", "\x1b[32m", "\x1b[2m", "\x1b[33m", "\x1b[0m",
+                )
             } else {
                 ("", "", "", "", "", "")
             };
@@ -472,7 +507,10 @@ fn render_engines(infos: &[EngineInfo], format: OutputFormat, no_color: bool) {
         ("", "", "")
     };
 
-    println!("{bold}Registered Search Engines ({}):{reset}\n", infos.len());
+    println!(
+        "{bold}Registered Search Engines ({}):{reset}\n",
+        infos.len()
+    );
     for e in infos {
         let cats: Vec<&str> = e.categories.iter().map(|c| c.as_str()).collect();
         println!(

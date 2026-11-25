@@ -29,7 +29,10 @@ pub fn rank_and_dedupe(
 
     let query_tokens: Vec<String> = query
         .split_whitespace()
-        .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()).to_ascii_lowercase())
+        .map(|t| {
+            t.trim_matches(|c: char| !c.is_alphanumeric())
+                .to_ascii_lowercase()
+        })
         .filter(|t| t.len() >= 2)
         .collect();
 
@@ -96,8 +99,8 @@ pub fn rank_and_dedupe(
                     .filter(|t| snippet_lower.contains(t.as_str()))
                     .count();
                 let denom = query_tokens.len() as f64;
-                term_bonus = 0.012 * (title_hits as f64 / denom)
-                    + 0.005 * (snippet_hits as f64 / denom);
+                term_bonus =
+                    0.012 * (title_hits as f64 / denom) + 0.005 * (snippet_hits as f64 / denom);
             }
 
             let raw_score = g.rrf_score + consensus_bonus + term_bonus;
@@ -117,11 +120,7 @@ pub fn rank_and_dedupe(
         })
         .collect();
 
-    scored.sort_by(|a, b| {
-        b.score
-            .total_cmp(&a.score)
-            .then_with(|| a.url.cmp(&b.url))
-    });
+    scored.sort_by(|a, b| b.score.total_cmp(&a.score).then_with(|| a.url.cmp(&b.url)));
     scored.truncate(limit);
     scored
 }
@@ -158,12 +157,7 @@ mod tests {
                 "duckduckgo",
                 3,
             ),
-            raw_item(
-                "Rust Language",
-                "https://rust-lang.org/",
-                "wikipedia",
-                2,
-            ),
+            raw_item("Rust Language", "https://rust-lang.org/", "wikipedia", 2),
         ];
 
         let ranked = rank_and_dedupe("rust language", raw, &weights, 10);

@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, RawResult};
 use crate::text::{extract_all_xml_tags, extract_xml_blocks, extract_xml_tag, truncate_chars};
 
@@ -76,7 +78,12 @@ pub(crate) fn parse_arxiv_atom(xml: &str) -> Vec<RawResult> {
         let snippet = if authors.is_empty() {
             truncate_chars(&summary, 280)
         } else {
-            let author_line = authors.iter().take(4).cloned().collect::<Vec<_>>().join(", ");
+            let author_line = authors
+                .iter()
+                .take(4)
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("[{author_line}] {}", truncate_chars(&summary, 220))
         };
 

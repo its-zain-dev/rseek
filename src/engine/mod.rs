@@ -257,7 +257,11 @@ impl SearchEngineService {
             if want_infobox {
                 tokio::time::timeout(
                     Duration::from_millis(timeout_ms.min(2500)),
-                    duckduckgo::fetch_infobox(&self.client, &effective_query, &self.config.user_agent),
+                    duckduckgo::fetch_infobox(
+                        &self.client,
+                        &effective_query,
+                        &self.config.user_agent,
+                    ),
                 )
                 .await
                 .unwrap_or(None)

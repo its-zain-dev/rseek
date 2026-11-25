@@ -45,7 +45,10 @@ pub fn build_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/suggest", get(suggest_handler))
         .route("/api/v1/health", get(health_handler))
         .route("/opensearch.xml", get(opensearch_handler))
-        .layer(middleware::from_fn_with_state(state.clone(), guard_and_cors))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            guard_and_cors,
+        ))
         .with_state(state)
 }
 
@@ -251,7 +254,9 @@ async fn guard_and_cors(
             if !is_authorized(&request, expected_key) {
                 let mut resp = (
                     StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "unauthorized: invalid or missing API key" })),
+                    Json(
+                        serde_json::json!({ "error": "unauthorized: invalid or missing API key" }),
+                    ),
                 )
                     .into_response();
                 apply_cors_headers(resp.headers_mut(), origin);
@@ -338,7 +343,12 @@ fn extract_client_ip(request: &Request) -> String {
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
     {
-        if let Some(first) = xff.split(',').next().map(str::trim).filter(|s| !s.is_empty()) {
+        if let Some(first) = xff
+            .split(',')
+            .next()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
             return first.to_string();
         }
     }
@@ -416,7 +426,11 @@ mod tests {
         assert_eq!(ui.status(), 200);
         assert!(ui.text().await.unwrap().contains("rseek"));
 
-        let health = client.get(format!("{base}/api/v1/health")).send().await.unwrap();
+        let health = client
+            .get(format!("{base}/api/v1/health"))
+            .send()
+            .await
+            .unwrap();
         assert_eq!(health.status(), 200);
         let json: serde_json::Value = health.json().await.unwrap();
         assert_eq!(json["status"], "ok");

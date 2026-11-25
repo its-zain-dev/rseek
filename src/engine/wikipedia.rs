@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, RawResult};
 use crate::text::{clean_text, sanitize_lang};
 

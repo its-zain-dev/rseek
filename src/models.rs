@@ -6,9 +6,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
 /// Search categories supported by rseek.
-#[derive(
-    Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum,
-)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, ValueEnum)]
 #[serde(rename_all = "lowercase")]
 pub enum Category {
     #[default]

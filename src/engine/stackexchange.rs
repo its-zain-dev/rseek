@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, RawResult};
 use crate::text::clean_text;
 
@@ -89,7 +91,11 @@ pub(crate) fn parse_stackexchange_json(body: &str) -> Result<Vec<RawResult>, Eng
 
     let mut out = Vec::with_capacity(parsed.items.len());
     for (idx, item) in parsed.items.into_iter().enumerate() {
-        let solved = if item.is_answered { "✓ solved" } else { "open" };
+        let solved = if item.is_answered {
+            "✓ solved"
+        } else {
+            "open"
+        };
         let tags_str = item.tags.join(", ");
         let snippet = format!(
             "Score: {} | Answers: {} ({solved}) | Tags: [{tags_str}]",
@@ -135,7 +141,10 @@ mod tests {
         }"#;
         let res = parse_stackexchange_json(json).expect("valid se json");
         assert_eq!(res.len(), 1);
-        assert_eq!(res[0].title, "How to implement async traits in Rust & Tokio?");
+        assert_eq!(
+            res[0].title,
+            "How to implement async traits in Rust & Tokio?"
+        );
         assert!(res[0].snippet.contains("solved"));
     }
 }

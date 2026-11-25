@@ -3,7 +3,9 @@ use std::collections::BTreeMap;
 use scraper::{Html, Selector};
 use serde::Deserialize;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, Infobox, RawResult};
 use crate::text::{clean_text, unwrap_ddg_url};
 

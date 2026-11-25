@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, RawResult};
 use crate::text::clean_text;
 
@@ -95,10 +97,7 @@ pub(crate) fn parse_crates_json(body: &str) -> Result<Vec<RawResult>, EngineErro
             .filter(|d| !d.is_empty())
             .unwrap_or_else(|| "No description provided.".to_string());
 
-        let snippet = format!(
-            "[v{} | {} downloads] {desc}",
-            c.newest_version, c.downloads
-        );
+        let snippet = format!("[v{} | {} downloads] {desc}", c.newest_version, c.downloads);
 
         let mut metadata = BTreeMap::new();
         metadata.insert("version".into(), serde_json::json!(c.newest_version));

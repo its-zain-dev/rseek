@@ -247,7 +247,8 @@ mod tests {
 
     #[test]
     fn cleans_html_and_entities() {
-        let raw = "<span class=\"searchmatch\">Rust</span> &amp; Cargo&#39;s &#x27;fast&#x27;   build";
+        let raw =
+            "<span class=\"searchmatch\">Rust</span> &amp; Cargo&#39;s &#x27;fast&#x27;   build";
         assert_eq!(clean_text(raw), "Rust & Cargo's 'fast' build");
     }
 
@@ -278,7 +279,10 @@ mod tests {
         let xml = "<feed><entry><title>Paper 1</title><author><name>Alice</name></author><author><name>Bob</name></author></entry></feed>";
         let entries = extract_xml_blocks(xml, "entry");
         assert_eq!(entries.len(), 1);
-        assert_eq!(extract_xml_tag(entries[0], "title").as_deref(), Some("Paper 1"));
+        assert_eq!(
+            extract_xml_tag(entries[0], "title").as_deref(),
+            Some("Paper 1")
+        );
         assert_eq!(
             extract_all_xml_tags(entries[0], "name"),
             vec!["Alice".to_string(), "Bob".to_string()]

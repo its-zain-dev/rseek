@@ -90,7 +90,9 @@ pub async fn run_repl(
                         page = p;
                         if let Some(q) = &last_query {
                             let req = build_req(q, category, &engines, &lang, page, limit);
-                            if let Some(resp) = execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await {
+                            if let Some(resp) =
+                                execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await
+                            {
                                 last_response = Some(resp);
                             }
                         }
@@ -101,7 +103,9 @@ pub async fn run_repl(
                     if let Some(q) = &last_query {
                         page += 1;
                         let req = build_req(q, category, &engines, &lang, page, limit);
-                        if let Some(resp) = execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await {
+                        if let Some(resp) =
+                            execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await
+                        {
                             last_response = Some(resp);
                         }
                     } else {
@@ -114,7 +118,9 @@ pub async fn run_repl(
                             page -= 1;
                         }
                         let req = build_req(q, category, &engines, &lang, page, limit);
-                        if let Some(resp) = execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await {
+                        if let Some(resp) =
+                            execute_and_print(ctx, req, OutputFormat::Pretty, no_color).await
+                        {
                             last_response = Some(resp);
                         }
                     } else {

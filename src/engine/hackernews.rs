@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::engine::{check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine};
+use crate::engine::{
+    check_http_status, map_reqwest_err, BoxFuture, EngineError, EngineRequest, SearchEngine,
+};
 use crate::models::{Category, RawResult};
 use crate::text::{clean_text, truncate_chars};
 
@@ -115,7 +117,11 @@ pub(crate) fn parse_hn_json(body: &str) -> Result<Vec<RawResult>, EngineError> {
         let points = hit.points.unwrap_or(0);
         let comments = hit.num_comments.unwrap_or(0);
         let author = hit.author.unwrap_or_else(|| "unknown".to_string());
-        let snippet = match hit.story_text.map(|s| clean_text(&s)).filter(|s| !s.is_empty()) {
+        let snippet = match hit
+            .story_text
+            .map(|s| clean_text(&s))
+            .filter(|s| !s.is_empty())
+        {
             Some(text) => format!(
                 "{points} pts | {comments} comments | by {author} — {}",
                 truncate_chars(&text, 160)
