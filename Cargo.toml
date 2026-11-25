@@ -1,6 +1,6 @@
 [package]
 name = "rseek"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Ultra-lightweight, free, zero-API-key Rust metasearch engine with HTTP API, Web UI, and Terminal CLI"
 license = "MIT"
@@ -13,7 +13,6 @@ categories = ["command-line-utilities", "web-programming::http-server"]
 axum = { version = "0.7", default-features = false, features = ["http1", "json", "query", "tokio"] }
 clap = { version = "4", features = ["derive", "env"] }
 futures = "0.3"
-hickory-resolver = { version = "0.24", default-features = false, features = ["tokio-runtime", "system-config"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "gzip", "deflate", "brotli", "json", "http2"] }
 scraper = "0.20"
 serde = { version = "1", features = ["derive"] }

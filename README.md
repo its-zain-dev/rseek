@@ -6,7 +6,7 @@ Ultra-lightweight, completely free, zero-API-key metasearch engine written in **
 
 - **100% Free & Zero API Keys:** Concurrent search across 10 built-in sources (`duckduckgo`, `wikipedia`, `wiby`, `hackernews`, `github`, `stackexchange`, `arxiv`, `crates`, `npm`, `wikimedia`) plus DuckDuckGo Instant Answer infoboxes.
 - **Smart Ranking & Deduplication:** Weighted Reciprocal Rank Fusion (RRF), multi-engine consensus boost, query-term relevance scoring, and canonical URL deduplication.
-- **Lightweight Single Binary:** Static musl & Android/Termux builds, pure-Rust `rustls` TLS, custom `hickory-resolver` DNS fallback for Termux/Android, bounded in-memory TTL cache, and per-engine circuit breakers.
+- **Lightweight Single Binary:** Static musl & Android/Termux builds, pure-Rust `rustls` TLS, system DNS + automatic cached DNS-over-HTTPS (DoH) fallback for Termux/Android, bounded in-memory TTL cache, and per-engine circuit breakers.
 - **Terminal CLI + Interactive REPL:** Pretty ANSI output, `compact`, `json`, `markdown`, and `urls` formats, `!bang` shortcuts, or query a remote hosted `rseek` instance with `--server`.
 - **Self-Hostable HTTP API & Web UI:** Built-in responsive dark/light Web UI (`/`), REST API (`/api/v1/search`), SearXNG-compatible `/search` endpoint, `/api/v1/suggest`, `/api/v1/engines`, `/api/v1/health`, `/opensearch.xml`, optional API-key auth, CORS, and per-IP rate limiting.
 
