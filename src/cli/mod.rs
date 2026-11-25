@@ -261,102 +261,126 @@ pub async fn run() -> Result<(), String> {
     };
     let no_color = cli.no_color || std::env::var_os("NO_COLOR").is_some();
 
-    if let Some(Command::Serve {
-        host,
-        port,
-        cors_origin,
-        rate_limit_per_min,
-        cache_ttl_secs,
-        cache_max_entries,
-    }) = cli.command
-    {
-        let search_cfg = SearchConfig {
-            timeout_ms: cli.timeout_ms,
-            cache_ttl_secs,
-            cache_max_entries,
-            proxy: cli.proxy,
-            ..SearchConfig::default()
-        };
-        let service = Arc::new(SearchEngineService::new(search_cfg)?);
-        let server_cfg = ServerConfig {
+    let Cli {
+        query: root_query,
+        category,
+        engines,
+        lang,
+        page,
+        limit,
+        timeout_ms,
+        format: _,
+        json: _,
+        no_cache,
+        no_color: _,
+        server,
+        api_key,
+        proxy,
+        command,
+    } = cli;
+
+    match command {
+        Some(Command::Serve {
             host,
             port,
-            api_key: cli.api_key,
             cors_origin,
             rate_limit_per_min,
-        };
-        return server::serve(service, server_cfg).await;
-    }
-
-    let ctx = if let Some(server_url) = cli.server {
-        let client = build_http_client(cli.timeout_ms, cli.proxy.as_deref())?;
-        CliContext::Remote {
-            base_url: server_url,
-            api_key: cli.api_key,
-            client,
+            cache_ttl_secs,
+            cache_max_entries,
+        }) => {
+            let search_cfg = SearchConfig {
+                timeout_ms,
+                cache_ttl_secs,
+                cache_max_entries,
+                proxy,
+                ..SearchConfig::default()
+            };
+            let service = Arc::new(SearchEngineService::new(search_cfg)?);
+            let server_cfg = ServerConfig {
+                host,
+                port,
+                api_key,
+                cors_origin,
+                rate_limit_per_min,
+            };
+            server::serve(service, server_cfg).await
         }
-    } else {
-        let search_cfg = SearchConfig {
-            timeout_ms: cli.timeout_ms,
-            proxy: cli.proxy,
-            ..SearchConfig::default()
-        };
-        CliContext::Local(Arc::new(SearchEngineService::new(search_cfg)?))
-    };
-
-    match cli.command {
-        Some(Command::Search { query }) => {
-            run_query_cmd(&ctx, &cli, query.join(" "), format, no_color).await
-        }
-        Some(Command::Engines) => {
-            let infos = ctx.engines().await?;
-            render_engines(&infos, format, no_color);
-            Ok(())
-        }
-        Some(Command::Suggest { query }) => {
-            let resp = ctx.suggest(&query.join(" "), &cli.lang).await?;
-            if format == OutputFormat::Json {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&resp).unwrap_or_default()
-                );
-            } else {
-                for s in resp.suggestions {
-                    println!("{s}");
+        other => {
+            let ctx = if let Some(server_url) = server {
+                let client = build_http_client(timeout_ms, proxy.as_deref())?;
+                CliContext::Remote {
+                    base_url: server_url,
+                    api_key,
+                    client,
                 }
-            }
-            Ok(())
-        }
-        Some(Command::Repl) => {
-            repl::run_repl(
-                &ctx,
-                cli.category,
-                cli.engines,
-                cli.lang,
-                cli.limit,
-                no_color,
-            )
-            .await
-        }
-        Some(Command::Serve { .. }) => unreachable!(),
-        None => {
-            if !cli.query.is_empty() {
-                run_query_cmd(&ctx, &cli, cli.query.join(" "), format, no_color).await
-            } else if std::io::stdin().is_terminal() {
-                repl::run_repl(
-                    &ctx,
-                    cli.category,
-                    cli.engines,
-                    cli.lang,
-                    cli.limit,
-                    no_color,
-                )
-                .await
             } else {
-                let mut cmd = Cli::command();
-                cmd.print_help().map_err(|e| e.to_string())?;
-                println!();
-                Ok(())
+                let search_cfg = SearchConfig {
+                    timeout_ms,
+                    proxy,
+                    ..SearchConfig::default()
+                };
+                CliContext::Local(Arc::new(SearchEngineService::new(search_cfg)?))
+            };
+
+            match other {
+                Some(Command::Search { query }) => {
+                    let req = SearchQuery {
+                        query: query.join(" "),
+                        category,
+                        engines,
+                        lang,
+                        page,
+                        limit,
+                        timeout_ms,
+                        no_cache,
+                    };
+                    run_query_cmd(&ctx, req, format, no_color).await
+                }
+                Some(Command::Engines) => {
+                    let infos = ctx.engines().await?;
+                    render_engines(&infos, format, no_color);
+                    Ok(())
+                }
+                Some(Command::Suggest { query }) => {
+                    let resp = ctx.suggest(&query.join(" "), &lang).await?;
+                    if format == OutputFormat::Json {
+                        println!(
+                            "{}",
+                            serde_json::to_string_pretty(&resp).unwrap_or_default()
+                        );
+                    } else {
+                        for s in resp.suggestions {
+                            println!("{s}");
+                        }
+                    }
+                    Ok(())
+                }
+                Some(Command::Repl) => {
+                    repl::run_repl(&ctx, category, engines, lang, limit, no_color).await
+                }
+                Some(Command::Serve { .. }) => unreachable!(),
+                None => {
+                    if !root_query.is_empty() {
+                        let req = SearchQuery {
+                            query: root_query.join(" "),
+                            category,
+                            engines,
+                            lang,
+                            page,
+                            limit,
+                            timeout_ms,
+                            no_cache,
+                        };
+                        run_query_cmd(&ctx, req, format, no_color).await
+                    } else if std::io::stdin().is_terminal() {
+                        repl::run_repl(&ctx, category, engines, lang, limit, no_color).await
+                    } else {
+                        let mut cmd = Cli::command();
+                        cmd.print_help().map_err(|e| e.to_string())?;
+                        println!();
+                        Ok(())
+                    }
+                }
             }
         }
     }
@@ -364,21 +388,10 @@ pub async fn run() -> Result<(), String> {
 
 async fn run_query_cmd(
     ctx: &CliContext,
-    cli: &Cli,
-    query_str: String,
+    req: SearchQuery,
     format: OutputFormat,
     no_color: bool,
 ) -> Result<(), String> {
-    let req = SearchQuery {
-        query: query_str,
-        category: cli.category,
-        engines: cli.engines.clone(),
-        lang: cli.lang.clone(),
-        page: cli.page,
-        limit: cli.limit,
-        timeout_ms: cli.timeout_ms,
-        no_cache: cli.no_cache,
-    };
     let resp = ctx.search(req).await?;
     render_search_response(&resp, format, no_color);
     Ok(())
