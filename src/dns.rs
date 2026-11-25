@@ -34,6 +34,7 @@ impl SmartDnsResolver {
         })
     }
 
+    #[cfg(test)]
     pub(crate) async fn resolve_host(&self, host: &str) -> Result<Vec<IpAddr>, std::io::Error> {
         resolve_host_with(&self.cache, &self.doh_client, host).await
     }
